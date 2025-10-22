@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freuden und Leiden eines Schulmeisters – Personenspiel & Quiz</title>
+<style>
+  :root{--bg:#f8f7f5;--card:#ffffff;--text:#222;--brand:#c24b0a;--muted:#666;--blue:#2563eb;--blue2:#1d4ed8;--green:#16a34a;--red:#dc2626;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  header{position:sticky;top:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06);z-index:10}
+  nav{max-width:1100px;margin:0 auto;padding:.8rem 1rem;display:flex;gap:.5rem;align-items:center;justify-content:space-between}
+  .brand{font-weight:800;color:var(--brand)}
+  .tabs{display:flex;gap:.5rem}
+  .tab{border:1px solid #ddd;background:#fff;color:#222;padding:.5rem .9rem;border-radius:.6rem;cursor:pointer;font-weight:600}
+  .tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  main{max-width:900px;margin:2rem auto;padding:0 1rem}
+  .card{background:var(--card);border-radius:1rem;padding:1.2rem 1.2rem;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+  h1{margin:.2rem 0 1rem 0;color:var(--brand);text-align:center}
+  h2{margin:0 0 .75rem 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+  .person{border:1px solid #eee;border-radius:.8rem;padding:.8rem}
+  .meta{color:var(--muted);font-size:.9rem}
+  .controls{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.5rem}
+  button.primary{background:var(--blue);border:none;color:#fff;padding:.55rem .9rem;border-radius:.6rem;cursor:pointer;font-weight:700}
+  button.primary:hover{background:var(--blue2)}
+  .progress{height:8px;background:#eee;border-radius:999px;overflow:hidden}
+  .bar{height:100%;background:var(--green);width:0%}
+  /* Quiz */
+  .q{margin-bottom:1rem}
+  .q h3{margin:.2rem 0 .5rem 0}
+  .opt{padding:.35rem .6rem;border-radius:.5rem;margin:.2rem 0;border:1px solid #eee;display:block}
+  .opt input{margin-right:.4rem}
+  .opt.correct{background:#eaf7ee;border-color:#a7e0b9}
+  .opt.wrong{background:#fde8e8;border-color:#f5b2b2}
+  .result{font-weight:800;text-align:center;margin-top:1rem}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <div class="brand">Freuden &amp; Leiden eines Schulmeisters</div>
+    <div class="tabs">
+      <button id="tab-personen" class="tab active">Personenspiel</button>
+      <button id="tab-quiz" class="tab">Quiz</button>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <!-- Personenspiel -->
+  <section id="view-personen" class="card">
+    <h1>Personenspiel</h1>
+    <p class="meta" style="text-align:center">Lerne die wichtigsten Figuren kennen und markiere, wen du schon kannst.</p>
+    <div id="personen-grid" class="grid"></div>
+    <div class="controls">
+      <button id="mark-all" class="primary">Alle als gelernt markieren</button>
+      <button id="reset-all" class="primary" style="background:#6b7280">Zurücksetzen</button>
+    </div>
+    <div style="margin-top:1rem">
+      <div class="meta">Fortschritt</div>
+      <div class="progress"><div id="progbar" class="bar"></div></div>
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="view-quiz" class="card hidden">
+    <h1>Quiz: Figuren &amp; Gesellschaft</h1>
+    <div id="quiz-box"></div>
+    <div class="controls">
+      <button id="btn-eval" class="primary">Auswerten</button>
+      <button id="btn-reset" class="primary" style="background:#6b7280">Quiz zurücksetzen</button>
+    </div>
+    <div id="quiz-result" class="result"></div>
+  </section>
+</main>
+
+<script>
+// ===== Navigation (ohne React) =====
+const tabPersonen = document.getElementById('tab-personen');
+const tabQuiz = document.getElementById('tab-quiz');
+const viewPersonen = document.getElementById('view-personen');
+const viewQuiz = document.getElementById('view-quiz');
+
+function show(view) {
+  if (view === 'personen') {
+    viewPersonen.classList.remove('hidden');
+    viewQuiz.classList.add('hidden');
+    tabPersonen.classList.add('active');
+    tabQuiz.classList.remove('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else {
+    viewQuiz.classList.remove('hidden');
+    viewPersonen.classList.add('hidden');
+    tabQuiz.classList.add('active');
+    tabPersonen.classList.remove('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+}
+tabPersonen.addEventListener('click', () => show('personen'));
+tabQuiz.addEventListener('click', () => show('quiz'));
+
+// ===== Daten =====
+const PERSONEN = [
+  { name:'Peter Käser', rolle:'Ich-Erzähler, Protagonist', funktion:'Schulmeister von Gytiwyl', eigenschaften:['fleißig','arm','scharfer Beobachter','empfindsam','verletzter Stolz'], kategorie:'Protagonist' },
+  { name:'Bäbi Käser', rolle:'Ehefrau', funktion:'Emotionale Stütze, häusliche Perspektive', eigenschaften:['fürsorglich','realistisch','erschöpft'], kategorie:'Familie' },
+  { name:'Schulkommissär', rolle:'Vertreter der Obrigkeit', funktion:'Schulaufsicht, entscheidet über Anstellungen', eigenschaften:['freundlich','machtvoll','pragmatisch'], kategorie:'Obrigkeit' },
+  { name:'Pfarrer', rolle:'Kirchliche Autorität', funktion:'Teil der Auswahlkommission', eigenschaften:['vorsichtig','konventionell'], kategorie:'Obrigkeit' },
+  { name:'Ammann / Gerichtsaess', rolle:'Lokale Macht', funktion:'Soziale Kontrolle', eigenschaften:['selbstbewusst','urteilt nach Äußerlichkeiten'], kategorie:'Dorfgemeinschaft' },
+  { name:'Vater Käser', rolle:'Vater / Weber', funktion:'Herkunft & Prägung', eigenschaften:['bäuerlich','kränklich'], kategorie:'Familie' },
+  { name:'Mutter Käser', rolle:'Mutter', funktion:'Prägende Kindheitserinnerungen', eigenschaften:['pragmatisch','kränklich'], kategorie:'Familie' },
+  { name:'Toni, der Küher', rolle:'Nebenfigur', funktion:'milieutypische Figur', eigenschaften:['bäuerlich'], kategorie:'Nebenfiguren' }
+];
+
+// ===== Personenspiel Rendern =====
+const grid = document.getElementById('personen-grid');
+const progbar = document.getElementById('progbar');
+let gelernt = new Set();
+
+function renderPersonen(){
+  grid.innerHTML = '';
+  PERSONEN.forEach((p, idx) => {
+    const el = document.createElement('div');
+    el.className = 'person';
+    el.innerHTML = `
+      <h3 style="margin:.2rem 0">${p.name}</h3>
+      <div class="meta">${p.kategorie} • ${p.rolle}</div>
+      <p style="margin:.5rem 0 .3rem 0"><strong>Funktion:</strong> ${p.funktion}</p>
+      <p class="meta"><strong>Eigenschaften:</strong> ${p.eigenschaften.join(', ')}</p>
+      <div class="controls" style="margin-top:.6rem">
+        <button class="primary" data-idx="${idx}">${gelernt.has(idx) ? '✓ Gelernt' : 'Als gelernt markieren'}</button>
+      </div>
+    `;
+    const btn = el.querySelector('button');
+    btn.addEventListener('click', () => {
+      if (gelernt.has(idx)) { gelernt.delete(idx); btn.textContent = 'Als gelernt markieren'; }
+      else { gelernt.add(idx); btn.textContent = '✓ Gelernt'; }
+      updateProgress();
+    });
+    grid.appendChild(el);
+  });
+  updateProgress();
+}
+function updateProgress(){
+  const pct = (gelernt.size / PERSONEN.length) * 100;
+  progbar.style.width = pct + '%';
+}
+document.getElementById('mark-all').addEventListener('click', () => {
+  gelernt = new Set(PERSONEN.map((_,i)=>i));
+  renderPersonen();
+});
+document.getElementById('reset-all').addEventListener('click', () => {
+  gelernt = new Set();
+  renderPersonen();
+});
+renderPersonen();
+
+// ===== Quiz =====
+const FRAGEN = [
+  { f:'Welche Rolle spielt Peter Käser im gesellschaftlichen Spannungsfeld?', opt:['Passiver Beobachter','Spiegelt Konflikte zwischen Obrigkeit und Gesellschaft','Vertreter der Obrigkeit'], k:1 },
+  { f:'Welche Funktion erfüllt der Ammann?', opt:['Soziale Kontrolle & konservative Macht','Unterstützt Peter Käser','Repräsentiert die Kirche'], k:0 },
+  { f:'Welche Figur steht für die öffentliche Meinung?', opt:['Pfarrer','Hauptbase (Presse)','Schulkommissär'], k:1 },
+  { f:'Welche Aussage trifft auf die Eltern von Peter Käser zu?', opt:['Bäuerliche Herkunft & Aufstiegsstreben','Vertreter der Obrigkeit','Verkörpern soziale Kontrolle'], k:0 },
+  { f:'Welche Bedeutung hat die Kommissionsszene (S. 96–100)?', opt:['Machtverhältnisse Obrigkeit vs. Dorf','Privater Ehestreit','Bäuerlicher Alltag'], k:0 },
+  { f:'Frau Käser steht im Text vor allem für …', opt:['Wirtschaftliche Sicherheit','Häusliche Perspektive & Armut','Öffentliche Macht'], k:1 },
+  { f:'Richtig oder falsch: Schulkommissär repräsentiert die Dorfgemeinschaft.', opt:['Richtig','Falsch'], k:1 },
+  { f:'Richtig oder falsch: Die Presse („Hauptbase“) verkörpert öffentliche Meinung.', opt:['Richtig','Falsch'], k:0 },
+  { f:'Richtig oder falsch: Die Pfarrerfigur zeigt vor allem revolutionäre Haltung.', opt:['Richtig','Falsch'], k:1 }
+];
+
+const quizBox = document.getElementById('quiz-box');
+const btnEval = document.getElementById('btn-eval');
+const btnReset = document.getElementById('btn-reset');
+const quizResult = document.getElementById('quiz-result');
+
+function renderQuiz(){
+  quizBox.innerHTML = '';
+  FRAGEN.forEach((q, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'q';
+    const title = document.createElement('h3');
+    title.innerText = (i+1) + '. ' + q.f;
+    wrap.appendChild(title);
+    q.opt.forEach((text, j) => {
+      const label = document.createElement('label');
+      label.className = 'opt';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'q' + i;
+      input.value = j;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(' ' + text));
+      wrap.appendChild(label);
+    });
+    quizBox.appendChild(wrap);
+  });
+  quizResult.textContent = '';
+}
+renderQuiz();
+
+btnEval.addEventListener('click', () => {
+  let score = 0;
+  // reset markings
+  document.querySelectorAll('.opt').forEach(o => o.classList.remove('correct','wrong'));
+  FRAGEN.forEach((q, i) => {
+    const selected = document.querySelector('input[name="q' + i + '"]:checked');
+    const options = Array.from(document.querySelectorAll('input[name="q' + i + '"]'));
+    // mark correct
+    const correctOpt = options.find(o => Number(o.value) === q.k);
+    if (correctOpt) correctOpt.parentElement.classList.add('correct');
+    // mark wrong if selected wrong
+    if (selected && Number(selected.value) !== q.k) {
+      selected.parentElement.classList.add('wrong');
+    }
+    if (selected && Number(selected.value) === q.k) score++;
+  });
+  quizResult.textContent = 'Du hast ' + score + ' von ' + FRAGEN.length + ' richtig.';
+});
+
+btnReset.addEventListener('click', () => {
+  renderQuiz();
+});
+</script>
+</body>
+</html>
