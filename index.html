@@ -1,1 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Freuden und Leiden eines Schulmeisters</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    nav {
+      background: #333;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      padding: 1rem;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    nav a.active {
+      text-decoration: underline;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #c24b0a;
+      text-align: center;
+    }
+    .question {
+      margin-bottom: 1.5rem;
+    }
+    .correct {
+      background-color: #c6f6d5;
+    }
+    .incorrect {
+      background-color: #fed7d7;
+    }
+    button {
+      padding: 0.7rem 1.5rem;
+      background: #3182ce;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: #2b6cb0;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a id="link-personenspiel" class="active">Personenspiel</a>
+    <a id="link-quiz">Quiz</a>
+  </nav>
+
+  <div class="container" id="content">
+    <!-- Inhalte werden dynamisch gerendert -->
+  </div>
+
+  <!-- React laden -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <script>
+    const { useState } = React;
+
+    function Personenspiel() {
+      return (
+        <div>
+          <h1>Personenspiel</h1>
+          <p>Willkommen zum Personenspiel. Hier werden später die Figuren vorgestellt.</p>
+          <ul>
+            <li>Peter Käser</li>
+            <li>Bäbi Käser</li>
+            <li>Schulkommissär</li>
+            <li>Pfarrer</li>
+            <li>Ammann / Gerichtsaess</li>
+            <li>Vater Käser</li>
+            <li>Mutter Käser</li>
+            <li>Toni, der Küher</li>
+          </ul>
+        </div>
+      );
+    }
+
+    function Quiz() {
+      const questions = [
+        {
+          text: "Welche Funktion hat Peter Käser in der Dorfgemeinschaft?",
+          options: ["Er ist Pfarrer", "Er ist Lehrer", "Er ist Amtmann"],
+          correct: 1
+        },
+        {
+          text: "Welche gesellschaftliche Rolle spielt der Schulkommissär?",
+          options: [
+            "Er vertritt die kirchliche Aufsicht",
+            "Er kontrolliert die Schule",
+            "Er arbeitet auf dem Feld"
+          ],
+          correct: 1
+        },
+        {
+          text: "Wofür steht Toni, der Küher?",
+          options: [
+            "Für bäuerliche Bevölkerung",
+            "Für die Obrigkeit",
+            "Für die Kirche"
+          ],
+          correct: 0
+        }
+      ];
+
+      const [answers, setAnswers] = useState(Array(questions.length).fill(null));
+      const [showResult, setShowResult] = useState(false);
+
+      const handleSelect = (qIndex, oIndex) => {
+        const updated = [...answers];
+        updated[qIndex] = oIndex;
+        setAnswers(updated);
+      };
+
+      const score = answers.reduce((acc, ans, i) => {
+        return ans === questions[i].correct ? acc + 1 : acc;
+      }, 0);
+
+      return (
+        <div>
+          <h1>Quiz: Figuren &amp; Gesellschaft</h1>
+          {questions.map((q, qIndex) => (
+            <div key={qIndex} className="question">
+              <p><strong>{q.text}</strong></p>
+              {q.options.map((opt, oIndex) => {
+                const isSelected = answers[qIndex] === oIndex;
+                const isCorrect = q.correct === oIndex;
+                let className = "";
+                if (showResult && isSelected) {
+                  className = isCorrect ? "correct" : "incorrect";
+                } else if (showResult && isCorrect) {
+                  className = "correct";
+                }
+                return (
+                  <div key={oIndex} className={className}>
+                    <label>
+                      <input
+                        type="radio"
+                        name={`q-${qIndex}`}
+                        checked={isSelected}
+                        onChange={() => handleSelect(qIndex, oIndex)}
+                      />
+                      {" "}{opt}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {!showResult ? (
+            <button onClick={() => setShowResult(true)}>Auswerten</button>
+          ) : (
+            <p>Du hast {score} von {questions.length} Fragen richtig beantwortet.</p>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      const [page, setPage] = useState("personenspiel");
+
+      React.useEffect(() => {
+        const linkPersonenspiel = document.getElementById("link-personenspiel");
+        const linkQuiz = document.getElementById("link-quiz");
+
+        linkPersonenspiel.onclick = () => setPage("personenspiel");
+        linkQuiz.onclick = () => setPage("quiz");
+      }, []);
+
+      return page === "personenspiel" ? <Personenspiel /> : <Quiz />;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("content"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+
 
